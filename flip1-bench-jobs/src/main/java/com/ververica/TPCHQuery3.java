@@ -299,6 +299,7 @@ public class TPCHQuery3 {
 
 	private static DataSet<Lineitem> getLineitemDataSet(ExecutionEnvironment env, String lineitemPath) {
 		return env.readCsvFile(lineitemPath)
+					.ignoreInvalidLines()
 					.fieldDelimiter("|")
 					.includeFields("1000011000100000")
 					.tupleType(Lineitem.class);
@@ -306,6 +307,7 @@ public class TPCHQuery3 {
 
 	private static DataSet<Customer> getCustomerDataSet(ExecutionEnvironment env, String customerPath) {
 		return env.readCsvFile(customerPath)
+					.ignoreInvalidLines()
 					.fieldDelimiter("|")
 					.includeFields("10000010")
 					.tupleType(Customer.class);
@@ -313,6 +315,7 @@ public class TPCHQuery3 {
 
 	private static DataSet<Order> getOrdersDataSet(ExecutionEnvironment env, String ordersPath) {
 		return env.readCsvFile(ordersPath)
+					.ignoreInvalidLines()
 					.fieldDelimiter("|")
 					.includeFields("110010010")
 					.tupleType(Order.class);
