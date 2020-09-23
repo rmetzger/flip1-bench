@@ -18,8 +18,10 @@
 
 package com.ververica;
 
+import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
+import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.aggregation.Aggregations;
@@ -99,43 +101,54 @@ public class TPCHQuery3 {
 
 		env.getConfig().setGlobalJobParameters(params);
 
+		if(params.has("executionMode")) {
+			env.getConfig().setExecutionMode(ExecutionMode.valueOf(params.get("executionMode")));
+		}
+
+		if(params.has("restart")) {
+			env.setRestartStrategy(
+				RestartStrategies.fixedDelayRestart(params.getInt("restart", Integer.MAX_VALUE), 10L));
+		}
+
 		// get input data
 		DataSet<Lineitem> lineitems = getLineitemDataSet(env, params.get("lineitem"));
 		DataSet<Customer> customers = getCustomerDataSet(env, params.get("customer"));
 		DataSet<Order> orders = getOrdersDataSet(env, params.get("orders"));
 
-		// Filter market segment "AUTOMOBILE"
-		customers = customers.filter(
-								new FilterFunction<Customer>() {
-									@Override
-									public boolean filter(Customer c) {
-										return c.getMktsegment().equals("AUTOMOBILE");
-									}
-								});
+		if(!params.has("disableFilters")) {
+			// Filter market segment "AUTOMOBILE"
+			customers = customers.filter(
+				new FilterFunction<Customer>() {
+					@Override
+					public boolean filter(Customer c) {
+						return c.getMktsegment().equals("AUTOMOBILE");
+					}
+				});
 
-		// Filter all Orders with o_orderdate < 12.03.1995
-		orders = orders.filter(
-							new FilterFunction<Order>() {
-								private final DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-								private final Date date = format.parse("1995-03-12");
+			// Filter all Orders with o_orderdate < 12.03.1995
+			orders = orders.filter(
+				new FilterFunction<Order>() {
+					private final DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+					private final Date date = format.parse("1995-03-12");
 
-								@Override
-								public boolean filter(Order o) throws ParseException {
-									return format.parse(o.getOrderdate()).before(date);
-								}
-							});
+					@Override
+					public boolean filter(Order o) throws ParseException {
+						return format.parse(o.getOrderdate()).before(date);
+					}
+				});
 
-		// Filter all Lineitems with l_shipdate > 12.03.1995
-		lineitems = lineitems.filter(
-								new FilterFunction<Lineitem>() {
-									private final DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-									private final Date date = format.parse("1995-03-12");
+			// Filter all Lineitems with l_shipdate > 12.03.1995
+			lineitems = lineitems.filter(
+				new FilterFunction<Lineitem>() {
+					private final DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+					private final Date date = format.parse("1995-03-12");
 
-									@Override
-									public boolean filter(Lineitem l) throws ParseException {
-										return format.parse(l.getShipdate()).after(date);
-									}
-								});
+					@Override
+					public boolean filter(Lineitem l) throws ParseException {
+						return format.parse(l.getShipdate()).after(date);
+					}
+				});
+		}
 
 		// Join customers with orders and package them into a ShippingPriorityItem
 		DataSet<ShippingPriorityItem> customerWithOrders =
