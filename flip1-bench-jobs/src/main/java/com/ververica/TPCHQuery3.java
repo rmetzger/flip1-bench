@@ -28,6 +28,7 @@ import org.apache.flink.api.java.aggregation.Aggregations;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -104,6 +105,7 @@ public class TPCHQuery3 {
 		if(params.has("executionMode")) {
 			env.getConfig().setExecutionMode(ExecutionMode.valueOf(params.get("executionMode")));
 		}
+
 
 		if(params.has("restart")) {
 			env.setRestartStrategy(
