@@ -21,6 +21,8 @@ package com.ververica;
 import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
+import org.apache.flink.api.common.functions.ReduceFunction;
+import org.apache.flink.api.common.functions.RichGroupReduceFunction;
 import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.java.DataSet;
@@ -31,6 +33,9 @@ import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.util.Collector;
+
+import io.prestosql.tpch.Customer;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -173,7 +178,7 @@ public class TPCHQuery3 {
 											new RichJoinFunction<ShippingPriorityItem, Lineitem, ShippingPriorityItem>() {
 												@Override
 												public ShippingPriorityItem join(ShippingPriorityItem i, Lineitem l) {
-													if (params.has("red-fail") && getRuntimeContext().getAttemptNumber() == 0) {
+													if (params.has("join-fail") && getRuntimeContext().getAttemptNumber() == 0) {
 														throw new RuntimeException("failed on first attempt ;) ");
 													}
 													i.setRevenue(l.getExtendedprice() * (1 - l.getDiscount()));
@@ -182,7 +187,22 @@ public class TPCHQuery3 {
 											})
 								// Group by l_orderkey, o_orderdate and o_shippriority and compute revenue sum
 								.groupBy(0, 2, 3)
-								.aggregate(Aggregations.SUM, 1);
+								.reduceGroup(new RichGroupReduceFunction<ShippingPriorityItem, ShippingPriorityItem>() {
+									@Override
+									public void reduce(Iterable<ShippingPriorityItem> values, Collector<ShippingPriorityItem> out) throws Exception {
+										if (params.has("reduce-fail") && getRuntimeContext().getAttemptNumber() == 0) {
+											throw new RuntimeException("failed on first attempt ;) ");
+										}
+										ShippingPriorityItem first = null;
+										for (ShippingPriorityItem item : values) {
+											if (first == null) {
+												first = item;
+											} else {
+												first.f1 += item.f1;
+											}
+										}
+									}
+								});
 
 		// emit result
 		if (params.has("output")) {
