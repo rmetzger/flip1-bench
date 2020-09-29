@@ -21,6 +21,7 @@ package com.ververica;
 import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
+import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -169,9 +170,12 @@ public class TPCHQuery3 {
 		DataSet<ShippingPriorityItem> result =
 				customerWithOrders.join(lineitems).where(0).equalTo(0)
 									.with(
-											new JoinFunction<ShippingPriorityItem, Lineitem, ShippingPriorityItem>() {
+											new RichJoinFunction<ShippingPriorityItem, Lineitem, ShippingPriorityItem>() {
 												@Override
 												public ShippingPriorityItem join(ShippingPriorityItem i, Lineitem l) {
+													if (params.has("red-fail") && getRuntimeContext().getAttemptNumber() == 0) {
+														throw new RuntimeException("failed on first attempt ;) ");
+													}
 													i.setRevenue(l.getExtendedprice() * (1 - l.getDiscount()));
 													return i;
 												}
