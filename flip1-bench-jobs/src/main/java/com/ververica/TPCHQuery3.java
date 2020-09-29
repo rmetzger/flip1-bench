@@ -28,6 +28,7 @@ import org.apache.flink.api.java.aggregation.Aggregations;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 import java.text.DateFormat;
@@ -181,7 +182,7 @@ public class TPCHQuery3 {
 
 		// emit result
 		if (params.has("output")) {
-			result.writeAsCsv(params.get("output"), "\n", "|");
+			result.writeAsCsv(params.get("output"), "\n", "|", FileSystem.WriteMode.OVERWRITE);
 			// execute program
 			env.execute("TPCH Query 3 Example");
 		} else {
