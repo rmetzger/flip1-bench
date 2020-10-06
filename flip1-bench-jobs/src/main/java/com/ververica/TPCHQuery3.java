@@ -179,9 +179,9 @@ public class TPCHQuery3 {
 												@Override
 												public ShippingPriorityItem join(ShippingPriorityItem i, Lineitem l) {
 													if (params.has("join-fail")) {
-														int upToAttempt = params.getInt("join-fail");
-														if (getRuntimeContext().getAttemptNumber() <= upToAttempt) {
-															throw new RuntimeException("failed on attempt " + upToAttempt);
+														int upToAttempt = params.getInt("join-fail", 1);
+														if (getRuntimeContext().getAttemptNumber() < upToAttempt) {
+															throw new RuntimeException("failed on attempt " + getRuntimeContext().getAttemptNumber() + " max: " + upToAttempt);
 														}
 													}
 													i.setRevenue(l.getExtendedprice() * (1 - l.getDiscount()));
@@ -194,9 +194,9 @@ public class TPCHQuery3 {
 									@Override
 									public void reduce(Iterable<ShippingPriorityItem> values, Collector<ShippingPriorityItem> out) throws Exception {
 										if (params.has("reduce-fail") ) {
-											int upToAttempt = params.getInt("reduce-fail");
-											if (getRuntimeContext().getAttemptNumber() <= upToAttempt) {
-												throw new RuntimeException("failed on attempt " + upToAttempt);
+											int upToAttempt = params.getInt("reduce-fail", 1);
+											if (getRuntimeContext().getAttemptNumber() < upToAttempt) {
+												throw new RuntimeException("failed on attempt " + getRuntimeContext().getAttemptNumber() + " max: " + upToAttempt);
 											}
 										}
 										ShippingPriorityItem first = null;
