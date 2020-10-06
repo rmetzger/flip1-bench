@@ -178,8 +178,11 @@ public class TPCHQuery3 {
 											new RichJoinFunction<ShippingPriorityItem, Lineitem, ShippingPriorityItem>() {
 												@Override
 												public ShippingPriorityItem join(ShippingPriorityItem i, Lineitem l) {
-													if (params.has("join-fail") && getRuntimeContext().getAttemptNumber() == 0) {
-														throw new RuntimeException("failed on first attempt ;) ");
+													if (params.has("join-fail")) {
+														int upToAttempt = params.getInt("join-fail");
+														if (getRuntimeContext().getAttemptNumber() <= upToAttempt) {
+															throw new RuntimeException("failed on attempt " + upToAttempt);
+														}
 													}
 													i.setRevenue(l.getExtendedprice() * (1 - l.getDiscount()));
 													return i;
@@ -190,8 +193,11 @@ public class TPCHQuery3 {
 								.reduceGroup(new RichGroupReduceFunction<ShippingPriorityItem, ShippingPriorityItem>() {
 									@Override
 									public void reduce(Iterable<ShippingPriorityItem> values, Collector<ShippingPriorityItem> out) throws Exception {
-										if (params.has("reduce-fail") && getRuntimeContext().getAttemptNumber() == 0) {
-											throw new RuntimeException("failed on first attempt ;) ");
+										if (params.has("reduce-fail") ) {
+											int upToAttempt = params.getInt("reduce-fail");
+											if (getRuntimeContext().getAttemptNumber() <= upToAttempt) {
+												throw new RuntimeException("failed on attempt " + upToAttempt);
+											}
 										}
 										ShippingPriorityItem first = null;
 										for (ShippingPriorityItem item : values) {
@@ -201,6 +207,7 @@ public class TPCHQuery3 {
 												first.f1 += item.f1;
 											}
 										}
+										out.collect(first);
 									}
 								});
 
