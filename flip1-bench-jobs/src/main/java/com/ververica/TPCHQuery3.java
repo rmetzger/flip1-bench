@@ -35,6 +35,8 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
 
+import com.ververica.utilz.KillerClient;
+import com.ververica.utilz.KillerServer;
 import io.prestosql.tpch.Customer;
 
 import java.text.DateFormat;
@@ -113,16 +115,20 @@ public class TPCHQuery3 {
 			env.getConfig().setExecutionMode(ExecutionMode.valueOf(params.get("executionMode")));
 		}
 
-
 		if(params.has("restart")) {
 			env.setRestartStrategy(
 				RestartStrategies.fixedDelayRestart(params.getInt("restart", Integer.MAX_VALUE), 10L));
 		}
 
+		if(params.has("para")) {
+			env.setParallelism(params.getInt("para"));
+		}
+		String killerRpcEndpoint = KillerServer.launchServer();
+
 		// get input data
-		DataSet<Lineitem> lineitems = getLineitemDataSet(env, params.get("lineitem"));
-		DataSet<Customer> customers = getCustomerDataSet(env, params.get("customer"));
-		DataSet<Order> orders = getOrdersDataSet(env, params.get("orders"));
+		DataSet<Lineitem> lineitems = KillerClient.addMapper(getLineitemDataSet(env, params.get("lineitem")), killerRpcEndpoint);
+		DataSet<Customer> customers = KillerClient.addMapper(getCustomerDataSet(env, params.get("customer")), killerRpcEndpoint);
+		DataSet<Order> orders = KillerClient.addMapper(getOrdersDataSet(env, params.get("orders")), killerRpcEndpoint);
 
 		if(!params.has("disableFilters")) {
 			// Filter market segment "AUTOMOBILE"
