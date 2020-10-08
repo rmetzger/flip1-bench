@@ -2,7 +2,7 @@
 
 FLINK="/Users/robert/Projects/tmp-flip1-benchmarks/flink-1.12-SNAPSHOT"
 JAR="/Users/robert/Projects/tmp-flip1-benchmarks/flip1-bench/flip1-bench-jobs/target/flip1-bench-jobs-1.0-SNAPSHOT.jar"
-DATA="/Users/robert/Projects/tmp-flip1-benchmarks/data/scale10"
+DATA="/Users/robert/Projects/tmp-flip1-benchmarks/data/scale50"
 OUT_DATA="/Users/robert/Projects/tmp-flip1-benchmarks/data"
 
 do_run() {
