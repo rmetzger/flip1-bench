@@ -21,23 +21,22 @@ package com.ververica;
 import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
-import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.functions.RichGroupReduceFunction;
 import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
-import org.apache.flink.api.java.aggregation.Aggregations;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.core.fs.FileSystem;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.util.Collector;
 
-import com.ververica.utilz.KillerClient;
+import com.ververica.utilz.KillerClientMapper;
+import com.ververica.utilz.KillerCsvFormat;
 import com.ververica.utilz.KillerServer;
-import io.prestosql.tpch.Customer;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -125,10 +124,12 @@ public class TPCHQuery3 {
 		}
 		String killerRpcEndpoint = KillerServer.launchServer();
 
-		// get input data
-		DataSet<Lineitem> lineitems = KillerClient.addMapper(getLineitemDataSet(env, params.get("lineitem")), killerRpcEndpoint);
-		DataSet<Customer> customers = KillerClient.addMapper(getCustomerDataSet(env, params.get("customer")), killerRpcEndpoint);
-		DataSet<Order> orders = KillerClient.addMapper(getOrdersDataSet(env, params.get("orders")), killerRpcEndpoint);
+		// get input data (triple data size)
+		DataSet<Lineitem> lineitems = KillerClientMapper.appendMapper(getLineitemDataSet(env, params.get("lineitem")), killerRpcEndpoint)
+									.union(KillerClientMapper.appendMapper(getLineitemDataSet(env, params.get("lineitem")), killerRpcEndpoint))
+									.union(KillerClientMapper.appendMapper(getLineitemDataSet(env, params.get("lineitem")), killerRpcEndpoint));
+		DataSet<Customer> customers = KillerClientMapper.appendMapper(getCustomerDataSet(env, params.get("customer")), killerRpcEndpoint);
+		DataSet<Order> orders = KillerClientMapper.appendMapper(getOrdersDataSet(env, params.get("orders")), killerRpcEndpoint);
 
 		if(!params.has("disableFilters")) {
 			// Filter market segment "AUTOMOBILE"
@@ -153,7 +154,7 @@ public class TPCHQuery3 {
 				});
 
 			// Filter all Lineitems with l_shipdate > 12.03.1995
-			lineitems = lineitems.filter(
+			lineitems = KillerClientMapper.appendMapper(lineitems.filter(
 				new FilterFunction<Lineitem>() {
 					private final DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 					private final Date date = format.parse("1995-03-12");
@@ -162,12 +163,12 @@ public class TPCHQuery3 {
 					public boolean filter(Lineitem l) throws ParseException {
 						return format.parse(l.getShipdate()).after(date);
 					}
-				});
+				}), killerRpcEndpoint);
 		}
 
 		// Join customers with orders and package them into a ShippingPriorityItem
 		DataSet<ShippingPriorityItem> customerWithOrders =
-				customers.join(orders).where(0).equalTo(1)
+			KillerClientMapper.appendMapper(customers.join(orders).where(0).equalTo(1)
 							.with(
 								new JoinFunction<Customer, Order, ShippingPriorityItem>() {
 									@Override
@@ -175,27 +176,26 @@ public class TPCHQuery3 {
 										return new ShippingPriorityItem(o.getOrderKey(), 0.0, o.getOrderdate(),
 												o.getShippriority());
 									}
-								});
+								}), killerRpcEndpoint);
 
 		// Join the last join result with Lineitems
-		DataSet<ShippingPriorityItem> result =
-				customerWithOrders.join(lineitems).where(0).equalTo(0)
-									.with(
-											new RichJoinFunction<ShippingPriorityItem, Lineitem, ShippingPriorityItem>() {
-												@Override
-												public ShippingPriorityItem join(ShippingPriorityItem i, Lineitem l) {
-													if (params.has("join-fail")) {
-														int upToAttempt = params.getInt("join-fail", 1);
-														if (getRuntimeContext().getAttemptNumber() < upToAttempt) {
-															throw new RuntimeException("failed on attempt " + getRuntimeContext().getAttemptNumber() + " max: " + upToAttempt);
-														}
-													}
-													i.setRevenue(l.getExtendedprice() * (1 - l.getDiscount()));
-													return i;
+		DataSet<ShippingPriorityItem> joinResult = KillerClientMapper.appendMapper(customerWithOrders.join(lineitems).where(0).equalTo(0)
+								.with(
+									new RichJoinFunction<ShippingPriorityItem, Lineitem, ShippingPriorityItem>() {
+										@Override
+										public ShippingPriorityItem join(ShippingPriorityItem i, Lineitem l) {
+											if (params.has("join-fail")) {
+												int upToAttempt = params.getInt("join-fail", 1);
+												if (getRuntimeContext().getAttemptNumber() < upToAttempt) {
+													throw new RuntimeException("failed on attempt " + getRuntimeContext().getAttemptNumber() + " max: " + upToAttempt);
 												}
-											})
+											}
+											i.setRevenue(l.getExtendedprice() * (1 - l.getDiscount()));
+											return i;
+										}
+									}), killerRpcEndpoint);
 								// Group by l_orderkey, o_orderdate and o_shippriority and compute revenue sum
-								.groupBy(0, 2, 3)
+		DataSet<ShippingPriorityItem> result = KillerClientMapper.appendMapper(joinResult.groupBy(0, 2, 3)
 								.reduceGroup(new RichGroupReduceFunction<ShippingPriorityItem, ShippingPriorityItem>() {
 									@Override
 									public void reduce(Iterable<ShippingPriorityItem> values, Collector<ShippingPriorityItem> out) throws Exception {
@@ -215,11 +215,14 @@ public class TPCHQuery3 {
 										}
 										out.collect(first);
 									}
-								});
+								}), killerRpcEndpoint);
 
 		// emit result
 		if (params.has("output")) {
-			result.writeAsCsv(params.get("output"), "\n", "|", FileSystem.WriteMode.OVERWRITE);
+			KillerCsvFormat<ShippingPriorityItem> of = new KillerCsvFormat<>(new Path(params.get("output")), "\n", "|", killerRpcEndpoint);
+			of.setWriteMode(FileSystem.WriteMode.OVERWRITE);
+			result.output(of);
+			//result.writeAsCsv(params.get("output"), "\n", "|", FileSystem.WriteMode.OVERWRITE);
 			// execute program
 			env.execute("TPCH Query 3 Example");
 		} else {

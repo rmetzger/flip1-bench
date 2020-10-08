@@ -28,7 +28,7 @@ public class KillerServer extends RpcEndpoint implements KillerServerInterface {
 
     protected KillerServer(RpcService rpcService) {
         super(rpcService);
-        new Thread(() -> {
+       /* new Thread(() -> {
             try {
                 while (true) {
                     Thread.sleep(10_000);
@@ -48,7 +48,7 @@ public class KillerServer extends RpcEndpoint implements KillerServerInterface {
             } catch (Throwable e) {
                 LOG.warn("Thread died", e);
             }
-        }).start();
+        }).start(); */
     }
 
     @Override
