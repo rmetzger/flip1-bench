@@ -9,16 +9,18 @@ import java.util.concurrent.ExecutionException;
 
 public class KillerCsvFormat<T extends Tuple> extends CsvOutputFormat<T> {
 
-    private final KillerClient killerClient;
+    private final String killerRpcEndpoint;
+    private transient KillerClient killerClient;
 
     public KillerCsvFormat(Path outputPath, String recordDelimiter, String fieldDelimiter, String killerRpcEndpoint) {
         super(outputPath, recordDelimiter, fieldDelimiter);
-        killerClient = new KillerClient(killerRpcEndpoint);
+        this.killerRpcEndpoint = killerRpcEndpoint;
     }
 
     @Override
     public void open(int taskNumber, int numTasks) throws IOException {
         super.open(taskNumber, numTasks);
+        killerClient = new KillerClient(killerRpcEndpoint);
         try {
             killerClient.open(getRuntimeContext());
         } catch (Exception e) {
