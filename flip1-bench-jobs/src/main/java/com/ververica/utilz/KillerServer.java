@@ -47,7 +47,7 @@ public class KillerServer extends RpcEndpoint implements KillerServerInterface {
                                 continue;
                             }
 
-                            UUID toKill = clients[RNG.nextInt(clients.length - 1)];
+                            UUID toKill = clients[RNG.nextInt(clients.length)];
                             LOG.info("Selected client to kill {}", toKill);
                             CompletableFuture<Action> toKillFuture = registeredClients.remove(toKill);
                             toKillFuture.complete(Action.KILL);

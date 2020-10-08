@@ -8,6 +8,14 @@ import java.util.Random;
 
 public class SlotSecondAnalyzer {
     public static void main(String[] args) {
+        Random RNG = new Random();
+        System.out.println(RNG.nextInt(2));
+        System.out.println(RNG.nextInt(2));
+        System.out.println(RNG.nextInt(2));
+        System.out.println(RNG.nextInt(2));
+        System.out.println(RNG.nextInt(2));
+        System.out.println(RNG.nextInt(2));
+
         /**
          * Job runtime: 10 minutes (no failures)
          *
