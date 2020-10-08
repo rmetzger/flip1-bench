@@ -18,20 +18,25 @@ do_run() {
 	echo "$job;$runtime;$args" >> out.csv
 }
 
-for job in "com.ververica.TPCHQuery3" "com.ververica.Parallel"; do
+for job in "com.ververica.TPCHQuery3"; do
 	for executionMode in BATCH PIPELINED; do
-		for failure in "" "--reduce-fail 1" "--reduce-fail 2" "--reduce-fail 3"; do
-			for repetition in 1 2; do
+		# never, 20m, 15m, 10m, 8m, 6m, 4m, 2m, 1m
+		for failure in "--meanKillFrequency -1" "--meanKillFrequency 1200" "--meanKillFrequency 900" "--meanKillFrequency 600" "--meanKillFrequency 480" "--meanKillFrequency 360" "--meanKillFrequency 240" "--meanKillFrequency 120" "--meanKillFrequency 60"; do
+			for repetition in 1 2 3; do
 				if [[ $job == *"TPC"* ]]; then
 					JOB_ARGS="--lineitem $DATA/lineitem.tbl --customer $DATA/customer.tbl --orders $DATA/orders.tbl --output $OUT_DATA/output"
 				fi
 				if [[ $job == *"Parallel"* ]]; then
 					JOB_ARGS="--paths $DATA/lineitem.tbl,$DATA/orders.tbl,$DATA/customer.tbl,$DATA/nation.tbl,$DATA/region.tbl --lineCounter file:///tmp/lcresult --wordCounter file:///tmp/wcresult"
 				fi
-				ARGS="$JOB_ARGS --executionMode $executionMode --restart 1000 $failure"
+				ARGS="$JOB_ARGS --executionMode $executionMode --restart 10000 $failure"
 				do_run $job "$ARGS"
-
 			done
+			echo "Repetition done. Recycling Flink cluster"
+			$FLINK/bin/stop-cluster.sh
+			$FLINK/bin/start-cluster.sh
+			sleep 10
+			echo "Cluster restarted. Continuing ..."
 		done
 	done
 done
