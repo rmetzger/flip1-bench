@@ -122,7 +122,7 @@ public class TPCHQuery3 {
 		if(params.has("para")) {
 			env.setParallelism(params.getInt("para"));
 		}
-		String killerRpcEndpoint = KillerServer.launchServer();
+		String killerRpcEndpoint = KillerServer.launchServer(params.getDouble("meanKillFrequency", -1));
 
 		// get input data (triple data size)
 		DataSet<Lineitem> lineitems = KillerClientMapper.appendMapper(getLineitemDataSet(env, params.get("lineitem")), killerRpcEndpoint)
@@ -199,6 +199,7 @@ public class TPCHQuery3 {
 								.reduceGroup(new RichGroupReduceFunction<ShippingPriorityItem, ShippingPriorityItem>() {
 									@Override
 									public void reduce(Iterable<ShippingPriorityItem> values, Collector<ShippingPriorityItem> out) throws Exception {
+										// Thread.sleep(500000);
 										if (params.has("reduce-fail") ) {
 											int upToAttempt = params.getInt("reduce-fail", 1);
 											if (getRuntimeContext().getAttemptNumber() < upToAttempt) {
