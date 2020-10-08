@@ -1,15 +1,11 @@
 package com.ververica.utilz;
 
-import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.time.Time;
-import org.apache.flink.api.java.DataSet;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.rpc.akka.AkkaRpcService;
 import org.apache.flink.runtime.rpc.akka.AkkaRpcServiceUtils;
 
-import com.ververica.TPCHQuery3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +33,7 @@ public class KillerClient {
     public void open(RuntimeContext context) throws Exception {
         myId = UUID.randomUUID();
         Configuration config = new Configuration();
-        synchronized (KillerClientMapper.class) {
+        synchronized (KillerClient.class) {
             if (rpcService == null) {
                 rpcService = AkkaRpcServiceUtils.createRemoteRpcService(config, "localhost", "12000-14000", "localhost", Optional.empty());
                 LOG.info("RPC service started");
