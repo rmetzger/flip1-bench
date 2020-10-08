@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 public class KillerClient {
-    private static final Logger LOG = LoggerFactory.getLogger(KillerClient.class);
+    private final Logger log;
 
     private final Time timeout;
     private UUID myId;
@@ -32,6 +32,7 @@ public class KillerClient {
         this.killerRpcEndpoint = killerRpcEndpoint;
         timeout = Time.hours(24);
         rpcService = null;
+        log = LoggerFactory.getLogger(this.toString() + "-" + myId);
     }
 
     public void open(RuntimeContext context) throws Exception {
@@ -41,38 +42,38 @@ public class KillerClient {
             if (rpcService == null) {
                 String portRangeStart = String.valueOf(12000 + RNG.nextInt(1500));
                 rpcService = AkkaRpcServiceUtils.createRemoteRpcService(config, "localhost", portRangeStart+ "-14000", "localhost", Optional.empty());
-                LOG.info("RPC service started");
+                log.info("RPC service started. On {} with classloader {}", this, this.getClass().getClassLoader());
                 context.registerUserCodeClassLoaderReleaseHookIfAbsent("closeRPC", () -> {
                     if (rpcService == null) {
                         return;
                     }
-                    LOG.info("Unregistering RPC service, despite having {} running clients.", runningClients);
+                    log.info("Unregistering RPC service, despite having {} running clients.", runningClients);
                     try {
                         rpcService.stopService().get();
                     } catch (Throwable e) {
-                        LOG.warn("Error while stopping RPC service", e);
+                        log.warn("Error while stopping RPC service", e);
                     }
                     rpcService = null;
                 });
             }
             CompletableFuture<KillerServerInterface> killerServiceFuture = rpcService.connect(killerRpcEndpoint, KillerServerInterface.class);
             runningClients++;
-            LOG.info("Connected to killer RPC endpoint: Running clients {}", runningClients);
+            log.info("Connected to killer RPC endpoint: Running clients {}", runningClients);
             killerService = killerServiceFuture.get();
             registered = true;
             registerFuture = killerService.register(myId, timeout);
-            LOG.info("Registered to killer service as " + myId +" subtask = " + context.getIndexOfThisSubtask() + " name = " + context.getTaskNameWithSubtasks());
+            log.info("Registered to killer service as " + myId +" subtask = " + context.getIndexOfThisSubtask() + " name = " + context.getTaskNameWithSubtasks());
         }
     }
 
     public void maybeFail() throws ExecutionException, InterruptedException {
         if (registerFuture.isDone()) {
             if (registerFuture.get() == KillerServerInterface.Action.KILL) {
-                LOG.info("Kill requested");
+                log.info("Kill requested");
                 close(); // closing, just to make sure.
                 throw new RuntimeException("Kill requested");
             } else {
-                LOG.warn("Unexpected future result: " + registerFuture.get());
+                log.warn("Unexpected future result: " + registerFuture.get());
             }
         }
     }
@@ -82,9 +83,9 @@ public class KillerClient {
             if (registered) {
                 killerService.unregister(myId, timeout).get();
                 runningClients--;
-                LOG.info("Unregistering from killer service. Running clients {}", runningClients);
+                log.info("Unregistering from killer service. Running clients {}", runningClients);
                 if (runningClients <= 0) {
-                    LOG.info("0 running clients. Stopping RPC service.");
+                    log.info("0 running clients. Stopping RPC service.");
                     rpcService.stopService().get();
                     rpcService = null;
                 }
