@@ -16,7 +16,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.math3.distribution.ExponentialDistribution;
-import org.apache.commons.math3.random.Well19937c;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +34,7 @@ public class KillerServer extends RpcEndpoint implements KillerServerInterface {
                 try {
                     LOG.info("Starting KillerServer with a mean kill frequency of {}", meanKillFrequency);
 
-                    ExponentialDistribution dist = new ExponentialDistribution(new Well19937c(2), meanKillFrequency);
+                    ExponentialDistribution dist = new ExponentialDistribution(meanKillFrequency);
                     while (true) {
                         long nextKillSeconds = Math.round(dist.sample());
                         LOG.info("Sleeping {} seconds until next kill", nextKillSeconds);
