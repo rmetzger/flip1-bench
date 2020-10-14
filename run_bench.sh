@@ -14,15 +14,19 @@ do_run() {
 	$($CMD > /tmp/_output)
 	cat /tmp/_output
 	runtime=$(cat /tmp/_output | grep "Job Runtime" | cut -d " " -f 3)
+	NEW_UUID=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+	cp /tmp/_output $NEW_UUID.out
 
-	echo "$job;$runtime;$args" >> out.csv
+	echo "$job;$runtime;$args" >> out2.csv
 }
 
 for job in "com.ververica.TPCHQuery3"; do
-	for executionMode in BATCH PIPELINED; do
+	for executionMode in PIPELINED; do
 		# never, 20m, 15m, 10m, 8m, 6m, 4m, 2m, 1m
-		for failure in "--meanKillFrequency -1" "--meanKillFrequency 1200" "--meanKillFrequency 900" "--meanKillFrequency 600" "--meanKillFrequency 480" "--meanKillFrequency 360" "--meanKillFrequency 240" "--meanKillFrequency 120" "--meanKillFrequency 60"; do
-			for repetition in 1 2 3; do
+		# now 9, 7, 5m
+		for failure in "--meanKillFrequency 900" "--meanKillFrequency 600" "--meanKillFrequency 540" "--meanKillFrequency 480" "--meanKillFrequency 420" "--meanKillFrequency 360" ; do
+		#for failure in "--meanKillFrequency -1"; do
+			for repetition in 1 2 3 4 5; do
 				if [[ $job == *"TPC"* ]]; then
 					JOB_ARGS="--lineitem $DATA/lineitem.tbl --customer $DATA/customer.tbl --orders $DATA/orders.tbl --output $OUT_DATA/output"
 				fi
