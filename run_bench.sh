@@ -21,10 +21,11 @@ do_run() {
 }
 
 for job in "com.ververica.TPCHQuery3"; do
-	for executionMode in BATCH; do
+	for executionMode in PIPELINED; do
 		# never, 20m, 15m, 10m, 8m, 6m, 4m, 2m, 1m
 		# now 9, 7, 5m
-		for failure in "--meanKillFrequency 900" "--meanKillFrequency 600" "--meanKillFrequency 540" "--meanKillFrequency 480" "--meanKillFrequency 420" "--meanKillFrequency 360" "--meanKillFrequency 300" "--meanKillFrequency 240" "--meanKillFrequency 180" "--meanKillFrequency 120" "--meanKillFrequency 60" ; do
+		for failure in "--meanKillFrequency 300" "--meanKillFrequency 240" "--meanKillFrequency 180" "--meanKillFrequency 120" "--meanKillFrequency 60" ; do
+		#for failure in "--meanKillFrequency 900" "--meanKillFrequency 600" "--meanKillFrequency 540" "--meanKillFrequency 480" "--meanKillFrequency 420" "--meanKillFrequency 360" "--meanKillFrequency 300" "--meanKillFrequency 240" "--meanKillFrequency 180" "--meanKillFrequency 120" "--meanKillFrequency 60" ; do
 		#for failure in "--meanKillFrequency -1"; do
 			for repetition in 1 2 3; do
 				if [[ $job == *"TPC"* ]]; then
