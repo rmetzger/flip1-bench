@@ -90,7 +90,12 @@ public class KillerClient {
                 log.info("Unregistering from killer service. Running clients {}", runningClients);
                 if (runningClients <= 0) {
                     log.info("0 running clients. Stopping RPC service.");
-                    rpcService.stopService().get();
+                    try {
+                        rpcService.stopService().get();
+                    } catch (InterruptedException e) {
+                        log.info("received interrupt. Stopping to wait ...");
+                        // ignore and hope it will stop eventually.
+                    }
                     rpcService = null;
                 }
             }
