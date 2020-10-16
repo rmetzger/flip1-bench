@@ -45,7 +45,7 @@ public class KillerClient {
                 String portRangeStart = String.valueOf(12000 + RNG.nextInt(1500));
                 rpcService = AkkaRpcServiceUtils.createRemoteRpcService(config, "localhost", portRangeStart+ "-14000", "localhost", Optional.empty());
                 log.info("RPC service started. On {} with classloader {} and {} guarded by lock {}", this, KillerClient.class.getClassLoader(), this.getClass().getClassLoader(), lock);
-                context.registerUserCodeClassLoaderReleaseHookIfAbsent("closeRPC", () -> {
+                /*context.registerUserCodeClassLoaderReleaseHookIfAbsent("closeRPC", () -> {
                     try {
                         synchronized (lock) {
                             if (rpcService == null) {
@@ -58,7 +58,7 @@ public class KillerClient {
                     } catch (Throwable e) {
                         log.warn("Error while stopping RPC service", e);
                     }
-                });
+                }); */
             }
             CompletableFuture<KillerServerInterface> killerServiceFuture = rpcService.connect(killerRpcEndpoint, KillerServerInterface.class);
             runningClients++;
